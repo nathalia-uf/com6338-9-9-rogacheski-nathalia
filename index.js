@@ -1,17 +1,19 @@
-var URL = "https://api.openweathermap.org/data/2.5/weather?q=";
-var API_KEY = "e89fac7ae6e0f6ceaf56d0c8424f5ecc";
-var weatherDiv = document.getElementById('weather');
-var form = document.querySelector('form');
+const URL = "https://api.openweathermap.org/data/2.5/weather?q=";
+const API_KEY = "e89fac7ae6e0f6ceaf56d0c8424f5ecc";
+const weatherDiv = document.getElementById('weather-app');
+const form = document.querySelector('form');
 
-form.onsubmit = function(e) {
-  e.preventDefault();
-  var searchTerm = this.search.value;
-  if (!searchTerm) return;
-  fetch(URL + searchTerm + "&units=imperial" + "&appid=" + API_KEY)
-    .then(function(res) {
-        return res.json();
-    })
-    .then(function(data) {
+form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const searchTerm = event.target.search.value;
+    if (!searchTerm) return;
+  
+    try {
+      const response = await fetch(
+        `${URL}${searchTerm}&units=imperial&appid=${API_KEY}`
+      );
+    if (response.ok) {
+        const data = await response.json();
         console.log(data);
         weatherDiv.innerHTML = "";
         var h2 = document.createElement('h2');
