@@ -1,68 +1,116 @@
-const URL = "https://api.openweathermap.org/data/2.5/weather?q=";
-const API_KEY = "e89fac7ae6e0f6ceaf56d0c8424f5ecc";
-const weatherDiv = document.getElementById('weather-app');
-const form = document.querySelector('form');
+const weatherContainer = document.getElementById('weather')
+const formEl = document.querySelector('form')
+const inputEl = document.querySelector('input')
 
-form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const searchTerm = event.target.search.value;
-    if (!searchTerm) return;
-  
-    try {
-      const response = await fetch(
-        `${URL}${searchTerm}&units=imperial&appid=${API_KEY}`
-      );
-    if (response.ok) {
-        const data = await response.json();
-        console.log(data);
-        weatherDiv.innerHTML = "";
-        const h2 = document.createElement('h2');
-        h2.textContent = searchTerm.toUpperCase();
-        weatherDiv.appendChild(h2);
+formEl.onsubmit = function (e) {
+    e.preventDefault()
 
-        const mapLink = document.createElement('a');
-        mapLink.href = `https://www.google.com/maps/search/?api=1&query=${data.coord.lat},${data.coord.lon}`;
-        mapLink.target = "_blank";
-        mapLink.textContent = `View on Map`;
-        weatherDiv.appendChild(mapLink);
+    const userInput = inputEl.value.trim()
 
-        const iconCode = data.weather[0].icon;
-        const description = data.weather[0].description;
+    if(!userInput) return
 
-        const icon = document.createElement('img');
-        icon.src = `https://openweathermap.org/img/wn/${iconCode}.png`;
-        icon.alt = description;
-        weatherDiv.appendChild(icon);
+    getWeather(userInput)
+        .then(displayWeatherInfo)
+        .catch(displayLocNotFound)
 
-        const condition = document.createElement('p');
-        condition.textContent = description;
-        weatherDiv.appendChild(condition);
+    inputEl.value = ""
+}
 
-        const currentTemp = data.main.temp;
-        const temp = document.createElement('p');
-        temp.textContent = `Current: ${Math.round(currentTemp)}°F`;
-        weatherDiv.appendChild(temp);
+function getWeather(query){
+    if(!query.includes(",")) query += ',us'
 
-        const feelsLikeTemp = data.main.feels_like;
-        const feelsLike = document.createElement('p');
-        feelsLike.textContent = `Feels like: ${Math.round(feelsLikeTemp)}°F`;
-        weatherDiv.appendChild(feelsLike);
+    return fetch(
+        'https://api.openweathermap.org/data/2.5/weather?q=' + query + '&units=imperial&APPID=e89fac7ae6e0f6ceaf56d0c8424f5ecc'
+    )
+    .then(function(res){
+        return res.json()
+    })
+    .then (function(data){
+        if(data.cod === "404")throw new Error('location not found')
 
-        const dt = data.dt;
-        const updated = document.createElement('p');
-        updated.textContent = `Last updated: ${new Date(dt * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' }).toLowerCase()}`;
-        weatherDiv.appendChild(updated);
-    }else {
-        weatherDiv.innerHTML = "<p>Location not found</p>";
-      }
-    } catch (error) {
-      console.error(error);
-      weatherDiv.innerHTML = "<p>Something went wrong</p>";
+        const iconUrl = 'https://openweathermap.org/img/wn/' + 
+        data.weather[0].icon +
+        '@2x.png'
+
+        const description = data.weather[0].description
+        const actualTemp = data.main.temp
+        const feelsLikeTemp = data.main.feels_like
+        const place = data.name + ", " + data.sys.country
+
+        const updatedAt = new Date(data.dt *1000)
+
+        return{
+            coords: data.coord.lat + "," + data.coord.lon,
+            description : description,
+            iconUrl : iconUrl,
+            actualTemp: actualTemp,
+            feelsLikeTemp: feelsLikeTemp,
+            place: place,
+            updatedAt: updatedAt
+        }
+
+    })
+}
+function displayLocNotFound(){
+    weatherContainer.innerHTML = "";
+
+    const errMsg = document.createElement('h2')
+    errMsg.textContent = "Location not found"
+    weatherContainer.appendChild(errMsg)
+}
+
+function displayWeatherInfo(weatherObj){
+    weatherContainer.innerHTML = "";
+
+    function addBreak(){
+        weatherContainer.appendChild(
+            document.createElement('br')
+        )
     }
-  });
 
-  function getLocalTime(sec) {
-    return new Date(sec * 1000)
-      .toLocaleTimeString("en-US", { hour: "numeric", minute: "numeric" })
-      .toLowerCase();
-  }
+    const placeName= document.createElement('h2')
+    placeName.textContent = weatherObj.place
+    weatherContainer.appendChild(placeName)
+
+    const whereLink = document.createElement('a')
+    whereLink.textContent = "Click to view map"
+    whereLink.href = "https://www.google.com/maps/search/?api=1&query=" + weatherObj.coords
+    whereLink.target = "_BLANK"
+    weatherContainer.appendChild(whereLink)
+
+    const icon = document.createElement('img')
+    icon.src = weatherObj.iconUrl
+    weatherContainer.appendChild(icon)
+
+    const description = document.createElement('p')
+    description.textContent = weatherObj.description
+    description.style.textTransform = 'capitalize'
+    weatherContainer.appendChild(description)
+
+    addBreak()
+
+    const temp = document.createElement('p')
+    temp.textContent = "Current: " + 
+    weatherObj.actualTemp +
+    "℉"
+    weatherContainer.appendChild(temp)
+
+    const feelsLikeTemp = document.createElement('p')
+    feelsLikeTemp.textContent = "Feels Like: " + 
+    weatherObj.feelsLikeTemp + 
+    "℉"
+    weatherContainer.appendChild(feelsLikeTemp)
+
+    addBreak()
+
+    const updatedAt = document.createElement('p')
+    updatedAt.textContent = "Last updated: " +
+    weatherObj.updatedAt.toLocaleTimeString (
+        'en-US',
+        {
+            hour: 'numeric', 
+            minute: '2-digit'
+        }
+    )
+    weatherContainer.appendChild(updatedAt)
+}
